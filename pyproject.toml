@@ -1,0 +1,18 @@
+[project]
+name = "imgdupe"
+version = "0.1.0"
+description = "Local exact and near-duplicate image search using perceptual hashes."
+requires-python = ">=3.11"
+dependencies = [
+    "imagehash",
+    "numpy",
+    "pillow",
+    "tqdm",
+]
+
+[project.scripts]
+imgdupe = "imgdupe.cli:main"
+
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"

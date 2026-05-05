@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local databases and scan outputs
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+review/
+*_query.html
+clusters.json
+delete_candidates.txt
+dupes.json
+
+# Smoke-test fixtures generated during development
+sample_images/
+sample_images2/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
