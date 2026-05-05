@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cluster 1</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; color: #20262d; }
+    a { color: #245b9f; }
+    .clusters { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .cluster, .card { border: 1px solid #d9e1e8; border-radius: 6px; padding: 12px; background: #fff; }
+    .cluster { display: grid; gap: 8px; text-decoration: none; color: inherit; }
+    .cluster-title { font-weight: 700; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    img { width: 100%; max-width: 256px; aspect-ratio: 1; object-fit: contain; background: #f5f7fa; }
+    .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; color: #52606d; }
+    .path { word-break: break-all; color: #3e4c59; font-size: 13px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border-bottom: 1px solid #d9e1e8; padding: 8px; text-align: left; }
+    th { background: #f3f6f8; }
+  </style>
+</head>
+<body>
+  <main class="content">
+    
+    <nav><a href="index.html">Review index</a></nav>
+    <h1>Cluster 1</h1>
+    <section class="grid">
+            <article class="card">
+              <img src="thumbnails/1.jpg" alt="">
+              <div class="meta">
+                <strong>KEEP</strong>
+                <span>320x240</span>
+                <span>18.0 KB</span>
+                <span>JPEG</span>
+              </div>
+              <p class="path">C:\Users\huafa\Desktop\imageScanner\sample_images2\base.jpg</p>
+            </article>
+            
+            <article class="card">
+              <img src="thumbnails/2.jpg" alt="">
+              <div class="meta">
+                <strong></strong>
+                <span>320x240</span>
+                <span>12.0 KB</span>
+                <span>JPEG</span>
+              </div>
+              <p class="path">C:\Users\huafa\Desktop\imageScanner\sample_images2\blurred.jpg</p>
+            </article>
+            
+            <article class="card">
+              <img src="thumbnails/4.jpg" alt="">
+              <div class="meta">
+                <strong></strong>
+                <span>160x120</span>
+                <span>4.3 KB</span>
+                <span>JPEG</span>
+              </div>
+              <p class="path">C:\Users\huafa\Desktop\imageScanner\sample_images2\resized.jpg</p>
+            </article>
+            </section>
+    <h2>Pair Scores</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>A</th><th>B</th><th>Score</th><th>Decision</th>
+          <th>pHash</th><th>wHash</th><th>dHash</th><th>Grid</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr>
+              <td>1</td>
+              <td>4</td>
+              <td>98.54</td>
+              <td>strong_duplicate</td>
+              <td>2</td>
+              <td>0</td>
+              <td>0</td>
+              <td>9</td>
+            </tr>
+            
+            <tr>
+              <td>1</td>
+              <td>2</td>
+              <td>98.12</td>
+              <td>strong_duplicate</td>
+              <td>2</td>
+              <td>0</td>
+              <td>1</td>
+              <td>9</td>
+            </tr>
+            
+            <tr>
+              <td>2</td>
+              <td>4</td>
+              <td>96.67</td>
+              <td>strong_duplicate</td>
+              <td>4</td>
+              <td>0</td>
+              <td>1</td>
+              <td>9</td>
+            </tr>
+            </tbody>
+    </table>
+    
+  </main>
+</body>
+</html>

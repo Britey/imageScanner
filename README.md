@@ -13,6 +13,7 @@ Local exact and near-duplicate image search using SQLite and perceptual hashes.
 - Query-by-image with ranked scores
 - Optional HTML query report
 - Duplicate clustering
+- Static HTML cluster review gallery
 
 ## Commands
 
@@ -20,6 +21,7 @@ Local exact and near-duplicate image search using SQLite and perceptual hashes.
 imgdupe scan C:\path\to\images --db index.sqlite
 imgdupe query C:\path\to\image.jpg --db index.sqlite --html result.html
 imgdupe cluster --db index.sqlite --min-score 70
+imgdupe review --db index.sqlite --out review
 ```
 
 If the console script is not installed yet, run through the module form:

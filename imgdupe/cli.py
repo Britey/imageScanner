@@ -6,6 +6,7 @@ from pathlib import Path
 from .cluster import build_clusters
 from .db import connect, init_db
 from .query import query_image, write_query_html
+from .review import generate_review
 from .scan import scan_roots
 
 
@@ -26,6 +27,11 @@ def main(argv: list[str] | None = None) -> int:
     cluster_parser = subparsers.add_parser("cluster", help="Build duplicate clusters.")
     cluster_parser.add_argument("--db", type=Path, required=True)
     cluster_parser.add_argument("--min-score", type=float, default=70.0)
+
+    review_parser = subparsers.add_parser("review", help="Generate static cluster review pages.")
+    review_parser.add_argument("--db", type=Path, required=True)
+    review_parser.add_argument("--out", type=Path, required=True)
+    review_parser.add_argument("--thumbnail-size", type=int, default=256)
 
     args = parser.parse_args(argv)
 
@@ -64,6 +70,19 @@ def main(argv: list[str] | None = None) -> int:
             f"images={stats.images} candidate_pairs={stats.candidate_pairs} "
             f"scored_pairs={stats.scored_pairs} stored_matches={stats.stored_matches} "
             f"clusters={stats.clusters} clustered_images={stats.clustered_images}"
+        )
+        return 0
+
+    if args.command == "review":
+        stats = generate_review(
+            conn,
+            args.out,
+            thumbnail_size=args.thumbnail_size,
+        )
+        print(
+            "review complete: "
+            f"clusters={stats.clusters} images={stats.images} "
+            f"thumbnails={stats.thumbnails} out={stats.out_dir}"
         )
         return 0
 
