@@ -12,15 +12,17 @@ Local exact and near-duplicate image search using SQLite and perceptual hashes.
 - SQLite hash band index
 - Query-by-image with ranked scores
 - Optional HTML query report
+- Duplicate clustering
 
 ## Commands
 
 ```powershell
 imgdupe scan C:\path\to\images --db index.sqlite
 imgdupe query C:\path\to\image.jpg --db index.sqlite --html result.html
+imgdupe cluster --db index.sqlite --min-score 70
 ```
 
-Until the venv is repaired, run through the module form once Python works:
+If the console script is not installed yet, run through the module form:
 
 ```powershell
 .\.venv\Scripts\python.exe -m imgdupe.cli scan C:\path\to\images --db index.sqlite

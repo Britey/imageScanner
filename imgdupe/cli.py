@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .cluster import build_clusters
 from .db import connect, init_db
 from .query import query_image, write_query_html
 from .scan import scan_roots
@@ -21,6 +22,10 @@ def main(argv: list[str] | None = None) -> int:
     query_parser.add_argument("--db", type=Path, required=True)
     query_parser.add_argument("--html", type=Path)
     query_parser.add_argument("--limit", type=int, default=50)
+
+    cluster_parser = subparsers.add_parser("cluster", help="Build duplicate clusters.")
+    cluster_parser.add_argument("--db", type=Path, required=True)
+    cluster_parser.add_argument("--min-score", type=float, default=70.0)
 
     args = parser.parse_args(argv)
 
@@ -50,6 +55,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.html:
             write_query_html(args.html, query_path, results)
             print(f"wrote {args.html}")
+        return 0
+
+    if args.command == "cluster":
+        stats = build_clusters(conn, min_score=args.min_score)
+        print(
+            "cluster complete: "
+            f"images={stats.images} candidate_pairs={stats.candidate_pairs} "
+            f"scored_pairs={stats.scored_pairs} stored_matches={stats.stored_matches} "
+            f"clusters={stats.clusters} clustered_images={stats.clustered_images}"
+        )
         return 0
 
     parser.error(f"unknown command {args.command}")
