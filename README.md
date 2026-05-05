@@ -20,10 +20,11 @@ Local image search using SQLite and perceptual hashes.
 
 ```powershell
 imgdupe scan C:\path\to\images --db index.sqlite
-imgdupe query C:\path\to\image.jpg --db index.sqlite --html result.html
+imgdupe query C:\path\to\image.jpg --db index.sqlite --html result.html --min-score 55
 imgdupe cluster --db index.sqlite --min-score 70
 imgdupe review --db index.sqlite --out review
 imgdupe serve --db index.sqlite
+imgdupe failures --db index.sqlite
 ```
 
 If the console script is not installed yet, run through the module form:

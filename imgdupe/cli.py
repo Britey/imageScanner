@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .cluster import build_clusters
 from .db import connect, init_db
+from .failures import iter_failures
 from .query import query_image, write_query_html
 from .review import generate_review
 from .scan import scan_roots
@@ -24,6 +25,8 @@ def main(argv: list[str] | None = None) -> int:
     query_parser.add_argument("--db", type=Path, required=True)
     query_parser.add_argument("--html", type=Path)
     query_parser.add_argument("--limit", type=int, default=50)
+    query_parser.add_argument("--min-score", type=float, default=0.0)
+    query_parser.add_argument("--hide-exact", action="store_true")
 
     cluster_parser = subparsers.add_parser("cluster", help="Build similar-image groups.")
     cluster_parser.add_argument("--db", type=Path, required=True)
@@ -42,6 +45,10 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument("--min-score", type=float, default=55.0)
     serve_parser.add_argument("--thumbnail-size", type=int, default=256)
 
+    failures_parser = subparsers.add_parser("failures", help="Show image indexing failures.")
+    failures_parser.add_argument("--db", type=Path, required=True)
+    failures_parser.add_argument("--limit", type=int, default=100)
+
     args = parser.parse_args(argv)
 
     conn = connect(args.db)
@@ -58,7 +65,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "query":
         query_path = args.image.resolve()
-        results = query_image(conn, query_path, limit=args.limit)
+        results = query_image(
+            conn,
+            query_path,
+            limit=args.limit,
+            min_score=args.min_score,
+            include_exact=not args.hide_exact,
+        )
         for image_row, candidate, score in results:
             print(
                 f"{score.score:6.2f} {score.decision:18} "
@@ -98,12 +111,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "serve":
         serve(
             conn,
+            args.db,
             host=args.host,
             port=args.port,
             limit=args.limit,
             min_score=args.min_score,
             thumbnail_size=args.thumbnail_size,
         )
+        return 0
+
+    if args.command == "failures":
+        rows = iter_failures(conn, limit=args.limit)
+        for row in rows:
+            print(f"{row['path']}\t{row['decode_error']}")
+        print(f"failures: {len(rows)}")
         return 0
 
     parser.error(f"unknown command {args.command}")

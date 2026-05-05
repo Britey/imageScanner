@@ -19,6 +19,7 @@ def query_image(
     config: ScanConfig | None = None,
     limit: int = 50,
     min_score: float = 0.0,
+    include_exact: bool = True,
 ) -> list[tuple[sqlite3.Row, Candidate, PairScore]]:
     config = config or ScanConfig()
     hashes, _ = compute_image_hashes(
@@ -50,10 +51,13 @@ def query_image(
         if image_row is None:
             continue
         candidate_hashes = hash_row_to_dict(hash_row)
+        sha_equal = hashes.get("sha256") == image_row["sha256"]
+        if sha_equal and not include_exact:
+            continue
         pair_score = score_hashes(
             hashes,
             candidate_hashes,
-            sha_equal=hashes.get("sha256") == image_row["sha256"],
+            sha_equal=sha_equal,
         )
         if pair_score.decision != "reject" and pair_score.score >= min_score:
             results.append((image_row, candidate, pair_score))
