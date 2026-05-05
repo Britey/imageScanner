@@ -22,7 +22,99 @@ class SearchOptions:
     limit: int
     min_score: float
     include_exact: bool
+    tryhard: bool
     quality: str
+    lang: str
+
+
+TRANSLATIONS = {
+    "en": {
+        "app_title": "Image Search",
+        "failures": "Failures",
+        "indexed": "Indexed",
+        "searchable": "Searchable",
+        "groups": "Groups",
+        "matches": "Matches",
+        "image": "Image",
+        "language": "Language",
+        "english": "English",
+        "chinese": "Chinese",
+        "quality": "Quality",
+        "strict": "Strict",
+        "balanced": "Balanced",
+        "loose": "Loose",
+        "min_score": "Minimum score",
+        "max_results": "Max results",
+        "include_exact": "Include exact file matches",
+        "tryhard": "Tryhard crop search",
+        "crop_index": "Crop index",
+        "crop_ready": "ready",
+        "crop_missing": "not built",
+        "tryhard_hint": "Requires scanning with --crop-index.",
+        "tryhard_limited": "No crop index found. Tryhard will only compare query crop variants against the normal index.",
+        "search": "Search",
+        "new_search": "New search",
+        "results": "Results",
+        "showing": "Quality {quality} · score at least {score:.1f} · max {limit} results · exact matches {exact} · tryhard {tryhard}",
+        "shown": "shown",
+        "hidden": "hidden",
+        "on": "on",
+        "off": "off",
+        "no_results": "No results met the current score threshold.",
+        "indexing_failures": "Indexing Failures",
+        "no_failures": "No indexing failures recorded.",
+        "path": "Path",
+        "error": "Error",
+        "search_error": "Search Error",
+        "exact_match": "Exact visual match",
+        "strong_match": "Strong visual match",
+        "probable_match": "Probable visual match",
+        "possible_match": "Possible visual match",
+    },
+    "zh": {
+        "app_title": "图片搜索",
+        "failures": "失败记录",
+        "indexed": "已索引",
+        "searchable": "可搜索",
+        "groups": "分组",
+        "matches": "匹配",
+        "image": "图片",
+        "language": "语言",
+        "english": "英语",
+        "chinese": "中文",
+        "quality": "匹配强度",
+        "strict": "严格",
+        "balanced": "平衡",
+        "loose": "宽松",
+        "min_score": "最低分数",
+        "max_results": "最多结果",
+        "include_exact": "包含完全相同的文件",
+        "tryhard": "深度裁剪搜索",
+        "crop_index": "裁剪索引",
+        "crop_ready": "已建立",
+        "crop_missing": "未建立",
+        "tryhard_hint": "需要使用 --crop-index 扫描。",
+        "tryhard_limited": "未找到裁剪索引。深度搜索只会用查询图片的裁剪变体匹配普通索引。",
+        "search": "搜索",
+        "new_search": "重新搜索",
+        "results": "搜索结果",
+        "showing": "匹配强度 {quality} · 最低分数 {score:.1f} · 最多 {limit} 个结果 · 完全匹配{exact} · 深度搜索{tryhard}",
+        "shown": "显示",
+        "hidden": "隐藏",
+        "on": "开启",
+        "off": "关闭",
+        "no_results": "没有结果达到当前分数阈值。",
+        "indexing_failures": "索引失败记录",
+        "no_failures": "没有记录到索引失败。",
+        "path": "路径",
+        "error": "错误",
+        "search_error": "搜索错误",
+        "exact_match": "完全视觉匹配",
+        "strong_match": "强视觉匹配",
+        "probable_match": "可能视觉匹配",
+        "possible_match": "疑似视觉匹配",
+    },
+}
 
 
 def serve(
@@ -81,11 +173,12 @@ def _make_handler(state: WebState):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             parsed = urllib.parse.urlparse(self.path)
+            lang = _lang_from_query(parsed.query)
             if parsed.path == "/":
-                self._send_html(_index_page(state))
+                self._send_html(_index_page(state, lang))
                 return
             if parsed.path == "/failures":
-                self._send_html(_failures_page(state))
+                self._send_html(_failures_page(state, lang))
                 return
             if parsed.path.startswith("/thumb/"):
                 self._send_thumbnail(parsed.path.removeprefix("/thumb/"))
@@ -105,6 +198,7 @@ def _make_handler(state: WebState):
                     limit=options.limit,
                     min_score=options.min_score,
                     include_exact=options.include_exact,
+                    tryhard=options.tryhard,
                 )
                 self._send_html(_results_page(results, options))
             except Exception as exc:
@@ -168,61 +262,83 @@ def _make_handler(state: WebState):
     return Handler
 
 
-def _index_page(state: WebState) -> str:
+def _index_page(state: WebState, lang: str) -> str:
+    text = _text(lang)
     stats = _stats(state.conn)
     body = f"""
     <header class="topbar">
       <div>
-        <h1>Image Search</h1>
+        <h1>{text['app_title']}</h1>
         <p class="muted">{html.escape(str(state.db_path))}</p>
       </div>
-      <a href="/failures">Failures</a>
+      <a href="/failures?lang={lang}">{text['failures']}</a>
     </header>
     <section class="stats">
-      <div><strong>{stats['indexed']}</strong><span>Indexed</span></div>
-      <div><strong>{stats['hashed']}</strong><span>Searchable</span></div>
-      <div><strong>{stats['failed']}</strong><span>Failures</span></div>
-      <div><strong>{stats['groups']}</strong><span>Groups</span></div>
-      <div><strong>{stats['matches']}</strong><span>Matches</span></div>
+      <div><strong>{stats['indexed']}</strong><span>{text['indexed']}</span></div>
+      <div><strong>{stats['hashed']}</strong><span>{text['searchable']}</span></div>
+      <div><strong>{stats['failed']}</strong><span>{text['failures']}</span></div>
+      <div><strong>{stats['groups']}</strong><span>{text['groups']}</span></div>
+      <div><strong>{stats['matches']}</strong><span>{text['matches']}</span></div>
+      <div><strong>{text['crop_ready'] if stats['crop_images'] else text['crop_missing']}</strong><span>{text['crop_index']}</span></div>
     </section>
     <section class="search">
       <form method="post" action="/search" enctype="multipart/form-data">
         <label class="dropzone" for="image-input">
           <input id="image-input" type="file" name="image" accept="image/*" required>
-          <span>Image</span>
+          <span>{text['image']}</span>
         </label>
         <div class="controls">
           <label>
-            Quality
-            <select name="quality">
-              <option value="balanced" selected>Balanced</option>
-              <option value="strict">Strict</option>
-              <option value="loose">Loose</option>
+            {text['language']}
+            <select name="lang">
+              <option value="en" {_selected(lang, 'en')}>{text['english']}</option>
+              <option value="zh" {_selected(lang, 'zh')}>{text['chinese']}</option>
             </select>
           </label>
           <label>
-            Minimum score
+            {text['quality']}
+            <select name="quality">
+              <option value="balanced" selected>{text['balanced']}</option>
+              <option value="strict">{text['strict']}</option>
+              <option value="loose">{text['loose']}</option>
+            </select>
+          </label>
+          <label>
+            {text['min_score']}
             <input type="number" name="min_score" min="0" max="100" step="1" value="{state.min_score:.0f}">
           </label>
           <label>
-            Max results
+            {text['max_results']}
             <input type="number" name="limit" min="1" max="500" step="1" value="{state.limit}">
           </label>
           <label class="checkbox">
             <input type="checkbox" name="include_exact" value="1" checked>
-            Include exact file matches
+            {text['include_exact']}
           </label>
+          <label class="checkbox">
+            <input type="checkbox" name="tryhard" value="1">
+            {text['tryhard']}
+          </label>
+          {f"<p class='hint'>{text['tryhard_limited']}</p>" if not stats['crop_images'] else ""}
         </div>
-        <button type="submit">Search</button>
+        <button type="submit">{text['search']}</button>
       </form>
     </section>
     <script>
       const input = document.querySelector("#image-input");
+      const language = document.querySelector("select[name='lang']");
       const quality = document.querySelector("select[name='quality']");
       const minScore = document.querySelector("input[name='min_score']");
+      const tryhard = document.querySelector("input[name='tryhard']");
       const scores = {{ strict: "75", balanced: "{state.min_score:.0f}", loose: "40" }};
+      language.addEventListener("change", () => {{
+        window.location.href = "/?lang=" + encodeURIComponent(language.value);
+      }});
       quality.addEventListener("change", () => {{
         minScore.value = scores[quality.value] || scores.balanced;
+      }});
+      tryhard.addEventListener("change", () => {{
+        if (tryhard.checked && Number(minScore.value) > 25) minScore.value = "25";
       }});
       window.addEventListener("paste", event => {{
         const item = [...event.clipboardData.items].find(i => i.type.startsWith("image/"));
@@ -234,10 +350,11 @@ def _index_page(state: WebState) -> str:
       }});
     </script>
     """
-    return _page("Image Search", body)
+    return _page(text["app_title"], body, lang=lang)
 
 
 def _results_page(results, options: SearchOptions) -> str:
+    text = _text(options.lang)
     cards = []
     for image_row, candidate, score in results:
         cards.append(
@@ -247,27 +364,35 @@ def _results_page(results, options: SearchOptions) -> str:
                 <img src="/thumb/{int(image_row['id'])}.jpg" alt="">
               </a>
               <div class="score">{score.score:.2f}</div>
-              <div>{html.escape(_label(score.decision))}</div>
+              <div>{html.escape(_label(score.decision, options.lang))}</div>
               <div>{image_row['width']}x{image_row['height']} &middot; {human_size(image_row['size_bytes'])}</div>
-              <div class="details">pHash {score.phash_dist} &middot; wHash {score.whash_dist} &middot; dHash {score.dhash_dist} &middot; grid {score.grid_match_count} &middot; bands {candidate.total_hits}</div>
+              <div class="details">pHash {score.phash_dist} &middot; wHash {score.whash_dist} &middot; dHash {score.dhash_dist} &middot; grid {score.grid_match_count} &middot; crop {score.crop_min_dist} &middot; bands {candidate.total_hits}</div>
               <p class="path">{html.escape(image_row['path'])}</p>
             </article>
             """
         )
-    empty = "<p>No results met the current score threshold.</p>" if not cards else ""
+    empty = f"<p>{text['no_results']}</p>" if not cards else ""
+    summary = text["showing"].format(
+        quality=html.escape(_quality_label(options.quality, options.lang)),
+        score=options.min_score,
+        limit=options.limit,
+        exact=text["shown"] if options.include_exact else text["hidden"],
+        tryhard=text["on"] if options.tryhard else text["off"],
+    )
     body = f"""
-    <nav><a href="/">New search</a></nav>
+    <nav><a href="/?lang={options.lang}">{text['new_search']}</a></nav>
     <header>
-      <h1>Results</h1>
-      <p>Quality {html.escape(options.quality)} &middot; score at least {options.min_score:.1f} &middot; max {options.limit} results &middot; exact matches {html.escape('shown' if options.include_exact else 'hidden')}</p>
+      <h1>{text['results']}</h1>
+      <p>{summary}</p>
     </header>
     <section class="grid">{''.join(cards)}</section>
     {empty}
     """
-    return _page("Results", body)
+    return _page(text["results"], body, lang=options.lang)
 
 
-def _failures_page(state: WebState) -> str:
+def _failures_page(state: WebState, lang: str) -> str:
+    text = _text(lang)
     rows = state.conn.execute(
         """
         SELECT path, decode_error
@@ -287,33 +412,34 @@ def _failures_page(state: WebState) -> str:
             </tr>
             """
         )
-    empty = "<p>No indexing failures recorded.</p>" if not items else ""
     body = f"""
-    <nav><a href="/">Search</a></nav>
-    <h1>Indexing Failures</h1>
-    {empty}
+    <nav><a href="/?lang={lang}">{text['search']}</a></nav>
+    <h1>{text['indexing_failures']}</h1>
+    {f"<p>{text['no_failures']}</p>" if not items else ""}
+    <p><a href="/failures?lang=en">{text['english']}</a> · <a href="/failures?lang=zh">{text['chinese']}</a></p>
     <table>
-      <thead><tr><th>Path</th><th>Error</th></tr></thead>
+      <thead><tr><th>{text['path']}</th><th>{text['error']}</th></tr></thead>
       <tbody>{''.join(items)}</tbody>
     </table>
     """
-    return _page("Failures", body)
+    return _page(text["failures"], body, lang=lang)
 
 
 def _error_page(exc: Exception) -> str:
+    text = _text("en")
     return _page(
-        "Search Error",
+        text["search_error"],
         f"""
         <nav><a href="/">New search</a></nav>
-        <h1>Search Error</h1>
+        <h1>{text['search_error']}</h1>
         <p>{html.escape(type(exc).__name__)}: {html.escape(str(exc))}</p>
         """,
     )
 
 
-def _page(title: str, body: str) -> str:
+def _page(title: str, body: str, *, lang: str = "en") -> str:
     return f"""<!doctype html>
-<html lang="en">
+<html lang="{html.escape(lang)}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -339,6 +465,7 @@ def _page(title: str, body: str) -> str:
     .controls input, .controls select {{ min-width: 0; padding: 8px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; }}
     .controls .checkbox {{ display: flex; align-items: center; gap: 8px; }}
     .controls .checkbox input {{ width: auto; }}
+    .hint {{ color: #9b4d18; font-size: 13px; margin: 0; }}
     .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }}
     .result {{ border: 1px solid #d9e1e8; border-radius: 6px; background: #fff; padding: 12px; }}
     img {{ width: 100%; aspect-ratio: 1; object-fit: contain; background: #eef2f6; }}
@@ -428,11 +555,16 @@ def _options_from_fields(fields: dict[str, str], state: WebState) -> SearchOptio
     }
     min_score = _float_field(fields, "min_score", quality_scores.get(quality, state.min_score))
     limit = _int_field(fields, "limit", state.limit)
+    tryhard = fields.get("tryhard") == "1"
+    if tryhard:
+        min_score = min(min_score, 25.0)
     return SearchOptions(
         limit=max(1, min(limit, 500)),
         min_score=max(0.0, min(min_score, 100.0)),
         include_exact=fields.get("include_exact") == "1",
+        tryhard=tryhard,
         quality=quality if quality in quality_scores else "balanced",
+        lang=_normalize_lang(fields.get("lang")),
     )
 
 
@@ -463,6 +595,7 @@ def _stats(conn: sqlite3.Connection) -> dict[str, int]:
     hashed = conn.execute("SELECT COUNT(*) AS count FROM hashes").fetchone()["count"]
     groups = conn.execute("SELECT COUNT(DISTINCT cluster_id) AS count FROM clusters").fetchone()["count"]
     matches = conn.execute("SELECT COUNT(*) AS count FROM matches").fetchone()["count"]
+    crop_images = conn.execute("SELECT COUNT(DISTINCT image_id) AS count FROM crop_hashes").fetchone()["count"]
     return {
         "indexed": int(row["indexed"] or 0),
         "ok": int(row["ok"] or 0),
@@ -470,14 +603,38 @@ def _stats(conn: sqlite3.Connection) -> dict[str, int]:
         "hashed": int(hashed or 0),
         "groups": int(groups or 0),
         "matches": int(matches or 0),
+        "crop_images": int(crop_images or 0),
     }
 
 
-def _label(decision: str) -> str:
+def _lang_from_query(query: str) -> str:
+    values = urllib.parse.parse_qs(query)
+    return _normalize_lang(values.get("lang", ["en"])[0])
+
+
+def _normalize_lang(lang: str | None) -> str:
+    return lang if lang in TRANSLATIONS else "en"
+
+
+def _text(lang: str) -> dict[str, str]:
+    return TRANSLATIONS[_normalize_lang(lang)]
+
+
+def _selected(current: str, value: str) -> str:
+    return "selected" if current == value else ""
+
+
+def _quality_label(quality: str, lang: str) -> str:
+    text = _text(lang)
+    return text.get(quality, quality)
+
+
+def _label(decision: str, lang: str) -> str:
+    text = _text(lang)
     labels = {
-        "exact_duplicate": "Exact visual match",
-        "strong_duplicate": "Strong visual match",
-        "probable_duplicate": "Probable visual match",
-        "review": "Possible visual match",
+        "exact_duplicate": text["exact_match"],
+        "strong_duplicate": text["strong_match"],
+        "probable_duplicate": text["probable_match"],
+        "review": text["possible_match"],
     }
     return labels.get(decision, decision.replace("_", " "))

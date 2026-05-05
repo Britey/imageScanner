@@ -7,6 +7,10 @@ import imagehash
 from PIL import Image, ImageOps
 
 
+EDGE_CROP_FRACTIONS = (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75)
+CENTER_CROP_FRACTIONS = (0.95, 0.90, 0.80, 0.70, 0.60, 0.50)
+
+
 class ImageTooSmallError(ValueError):
     pass
 
@@ -61,11 +65,59 @@ def grid_hashes(img: Image.Image) -> list[bytes]:
     return results
 
 
+def crop_region_hashes(img: Image.Image) -> dict[str, bytes]:
+    width, height = img.size
+    boxes = crop_region_boxes(width, height)
+    results = {}
+    for name, box in boxes.items():
+        crop = img.crop(box)
+        if crop.width >= 32 and crop.height >= 32:
+            results[name] = imagehash_to_bytes(imagehash.phash(crop, hash_size=16))
+    return results
+
+
+def crop_region_boxes(width: int, height: int) -> dict[str, tuple[int, int, int, int]]:
+    boxes: dict[str, tuple[int, int, int, int]] = {}
+    for fraction in EDGE_CROP_FRACTIONS:
+        label = _fraction_label(fraction)
+        crop_width = max(1, int(width * fraction))
+        crop_height = max(1, int(height * fraction))
+        boxes[f"top_{label}"] = (0, 0, width, crop_height)
+        boxes[f"bottom_{label}"] = (0, height - crop_height, width, height)
+        boxes[f"left_{label}"] = (0, 0, crop_width, height)
+        boxes[f"right_{label}"] = (width - crop_width, 0, width, height)
+    for fraction in CENTER_CROP_FRACTIONS:
+        boxes[f"center_{_fraction_label(fraction)}"] = _center_box(width, height, fraction)
+    for y_name, upper, lower in (
+        ("top", 0, height // 2),
+        ("bottom", height // 2, height),
+    ):
+        for x_name, left, right in (
+            ("left", 0, width // 2),
+            ("right", width // 2, width),
+        ):
+            boxes[f"{y_name}_{x_name}_quarter"] = (left, upper, right, lower)
+    return boxes
+
+
+def _fraction_label(fraction: float) -> str:
+    return str(int(round(fraction * 100)))
+
+
+def _center_box(width: int, height: int, fraction: float) -> tuple[int, int, int, int]:
+    crop_width = max(1, int(width * fraction))
+    crop_height = max(1, int(height * fraction))
+    left = (width - crop_width) // 2
+    upper = (height - crop_height) // 2
+    return left, upper, left + crop_width, upper + crop_height
+
+
 def compute_image_hashes(
     path: Path,
     *,
     min_width: int = 32,
     min_height: int = 32,
+    include_crop_regions: bool = False,
 ) -> tuple[dict[str, bytes], dict[str, int | str]]:
     img = load_normalized(path, min_width=min_width, min_height=min_height)
     hashes = {
@@ -76,6 +128,9 @@ def compute_image_hashes(
     }
     for index, value in enumerate(grid_hashes(img)):
         hashes[f"grid{index}"] = value
+    if include_crop_regions:
+        for name, value in crop_region_hashes(img).items():
+            hashes[f"crop:{name}"] = value
     metadata = {
         "width": img.width,
         "height": img.height,

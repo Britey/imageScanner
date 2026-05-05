@@ -8,6 +8,7 @@ class ScanConfig:
     min_height: int = 32
     batch_size: int = 500
     workers: int = max(1, min((os.cpu_count() or 2) - 1, 8))
+    crop_index: bool = False
     whole_band_size: int = 2
     grid_band_size: int = 2
 

@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from .bands import insert_bands
 from .config import ScanConfig
-from .db import clear_hashes, get_existing_image, replace_hashes, upsert_image
+from .db import clear_hashes, get_existing_image, replace_crop_hashes, replace_hashes, upsert_image
 from .hashing import compute_image_hashes, sha256_file
 from .utils import iter_image_paths, utc_now_sql
 
@@ -72,6 +72,7 @@ def scan_roots(
             and int(existing["mtime_ns"]) == stat.st_mtime_ns
             and existing["decode_error"] is None
             and existing["missing_at"] is None
+            and (not config.crop_index or _has_crop_hashes(conn, int(existing["id"])))
         ):
             stats.skipped += 1
             continue
@@ -91,14 +92,23 @@ def scan_roots(
         return stats
 
     if workers <= 1:
-        results = (_hash_task(task, config.min_width, config.min_height) for task in tasks)
+        results = (
+            _hash_task(task, config.min_width, config.min_height, config.crop_index)
+            for task in tasks
+        )
         iterator = tqdm(results, total=len(tasks), desc="Hashing images", unit="image")
         for result in iterator:
             _store_result(conn, result, config, stats)
     else:
         with ProcessPoolExecutor(max_workers=workers) as executor:
             futures = [
-                executor.submit(_hash_task, task, config.min_width, config.min_height)
+                executor.submit(
+                    _hash_task,
+                    task,
+                    config.min_width,
+                    config.min_height,
+                    config.crop_index,
+                )
                 for task in tasks
             ]
             for future in tqdm(as_completed(futures), total=len(futures), desc="Hashing images", unit="image"):
@@ -134,6 +144,12 @@ def _store_result(
             result.hashes,
             clear_existing=result.had_existing_hashes,
         )
+        replace_crop_hashes(
+            conn,
+            image_id,
+            result.hashes,
+            clear_existing=result.had_existing_hashes,
+        )
         insert_bands(
             conn,
             image_id,
@@ -160,12 +176,18 @@ def _store_result(
         conn.commit()
 
 
-def _hash_task(task: ScanTask, min_width: int, min_height: int) -> ScanResult:
+def _hash_task(
+    task: ScanTask,
+    min_width: int,
+    min_height: int,
+    crop_index: bool,
+) -> ScanResult:
     try:
         hashes, metadata = compute_image_hashes(
             task.path,
             min_width=min_width,
             min_height=min_height,
+            include_crop_regions=crop_index,
         )
         return ScanResult(
             path=task.path,
@@ -199,3 +221,11 @@ def _sha256_or_none(path: Path) -> bytes | None:
         return sha256_file(path)
     except OSError:
         return None
+
+
+def _has_crop_hashes(conn: sqlite3.Connection, image_id: int) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM crop_hashes WHERE image_id = ? AND region = 'center_50' LIMIT 1",
+        (image_id,),
+    ).fetchone()
+    return row is not None

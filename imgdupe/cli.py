@@ -22,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     scan_parser.add_argument("--db", type=Path, required=True)
     scan_parser.add_argument("--workers", type=int, default=None)
     scan_parser.add_argument("--batch-size", type=int, default=None)
+    scan_parser.add_argument("--crop-index", action="store_true")
 
     query_parser = subparsers.add_parser("query", help="Find visually similar images.")
     query_parser.add_argument("image", type=Path)
@@ -30,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     query_parser.add_argument("--limit", type=int, default=50)
     query_parser.add_argument("--min-score", type=float, default=0.0)
     query_parser.add_argument("--hide-exact", action="store_true")
+    query_parser.add_argument("--tryhard", action="store_true")
 
     cluster_parser = subparsers.add_parser("cluster", help="Build similar-image groups.")
     cluster_parser.add_argument("--db", type=Path, required=True)
@@ -62,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
         scan_config = ScanConfig(
             workers=args.workers if args.workers is not None else default_scan_config.workers,
             batch_size=args.batch_size if args.batch_size is not None else default_scan_config.batch_size,
+            crop_index=args.crop_index,
         )
         stats = scan_roots(conn, args.roots, config=scan_config)
         print(
@@ -79,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
             limit=args.limit,
             min_score=args.min_score,
             include_exact=not args.hide_exact,
+            tryhard=args.tryhard,
         )
         for image_row, candidate, score in results:
             print(
@@ -86,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
                 f"bands={candidate.total_hits:3d} "
                 f"phash={score.phash_dist} whash={score.whash_dist} "
                 f"dhash={score.dhash_dist} grid={score.grid_match_count} "
+                f"crop={score.crop_min_dist} "
                 f"{image_row['path']}"
             )
         if args.html:

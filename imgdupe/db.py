@@ -45,6 +45,13 @@ CREATE TABLE IF NOT EXISTS hash_bands (
     PRIMARY KEY (hash_type, band_index, band_value, image_id)
 );
 
+CREATE TABLE IF NOT EXISTS crop_hashes (
+    image_id INTEGER NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+    region TEXT NOT NULL,
+    phash256 BLOB NOT NULL,
+    PRIMARY KEY (image_id, region)
+);
+
 CREATE TABLE IF NOT EXISTS matches (
     image_id_a INTEGER NOT NULL,
     image_id_b INTEGER NOT NULL,
@@ -69,6 +76,7 @@ CREATE TABLE IF NOT EXISTS clusters (
 CREATE INDEX IF NOT EXISTS idx_images_sha256 ON images(sha256);
 CREATE INDEX IF NOT EXISTS idx_images_path ON images(path);
 CREATE INDEX IF NOT EXISTS idx_hash_bands_image_id ON hash_bands(image_id);
+CREATE INDEX IF NOT EXISTS idx_crop_hashes_image_id ON crop_hashes(image_id);
 CREATE INDEX IF NOT EXISTS idx_matches_score ON matches(score);
 CREATE INDEX IF NOT EXISTS idx_clusters_cluster ON clusters(cluster_id);
 """
@@ -77,6 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_clusters_cluster ON clusters(cluster_id);
 MIGRATIONS = """
 DROP INDEX IF EXISTS idx_hash_bands_lookup;
 CREATE INDEX IF NOT EXISTS idx_hash_bands_image_id ON hash_bands(image_id);
+CREATE INDEX IF NOT EXISTS idx_crop_hashes_image_id ON crop_hashes(image_id);
 """
 
 
@@ -196,6 +205,7 @@ def replace_hashes(
 def clear_hashes(conn: sqlite3.Connection, image_id: int) -> None:
     conn.execute("DELETE FROM hash_bands WHERE image_id = ?", (image_id,))
     conn.execute("DELETE FROM hashes WHERE image_id = ?", (image_id,))
+    conn.execute("DELETE FROM crop_hashes WHERE image_id = ?", (image_id,))
 
 
 def fetch_hash_row(conn: sqlite3.Connection, image_id: int) -> sqlite3.Row | None:
@@ -205,3 +215,38 @@ def fetch_hash_row(conn: sqlite3.Connection, image_id: int) -> sqlite3.Row | Non
 def hash_row_to_dict(row: sqlite3.Row) -> dict[str, bytes]:
     keys = ["dhash256", "phash256", "whash256"] + [f"grid{i}" for i in range(9)]
     return {key: row[key] for key in keys if row[key] is not None}
+
+
+def replace_crop_hashes(
+    conn: sqlite3.Connection,
+    image_id: int,
+    hashes: dict[str, bytes],
+    *,
+    clear_existing: bool = True,
+) -> None:
+    crop_rows = [
+        (image_id, key.removeprefix("crop:"), value)
+        for key, value in hashes.items()
+        if key.startswith("crop:")
+    ]
+    if clear_existing:
+        conn.execute("DELETE FROM crop_hashes WHERE image_id = ?", (image_id,))
+    if not crop_rows:
+        return
+    conn.executemany(
+        """
+        INSERT INTO crop_hashes (image_id, region, phash256)
+        VALUES (?, ?, ?)
+        ON CONFLICT(image_id, region) DO UPDATE SET
+            phash256 = excluded.phash256
+        """,
+        crop_rows,
+    )
+
+
+def fetch_crop_hashes(conn: sqlite3.Connection, image_id: int) -> dict[str, bytes]:
+    rows = conn.execute(
+        "SELECT region, phash256 FROM crop_hashes WHERE image_id = ?",
+        (image_id,),
+    ).fetchall()
+    return {f"crop:{row['region']}": row["phash256"] for row in rows}
