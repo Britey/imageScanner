@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .cluster import build_clusters
+from .config import ScanConfig
 from .db import connect, init_db
 from .failures import iter_failures
 from .query import query_image, write_query_html
@@ -19,6 +20,8 @@ def main(argv: list[str] | None = None) -> int:
     scan_parser = subparsers.add_parser("scan", help="Index image files into SQLite.")
     scan_parser.add_argument("roots", nargs="+", type=Path)
     scan_parser.add_argument("--db", type=Path, required=True)
+    scan_parser.add_argument("--workers", type=int, default=None)
+    scan_parser.add_argument("--batch-size", type=int, default=None)
 
     query_parser = subparsers.add_parser("query", help="Find visually similar images.")
     query_parser.add_argument("image", type=Path)
@@ -55,10 +58,15 @@ def main(argv: list[str] | None = None) -> int:
     init_db(conn)
 
     if args.command == "scan":
-        stats = scan_roots(conn, args.roots)
+        default_scan_config = ScanConfig()
+        scan_config = ScanConfig(
+            workers=args.workers if args.workers is not None else default_scan_config.workers,
+            batch_size=args.batch_size if args.batch_size is not None else default_scan_config.batch_size,
+        )
+        stats = scan_roots(conn, args.roots, config=scan_config)
         print(
             "scan complete: "
-            f"seen={stats.seen} indexed={stats.indexed} "
+            f"seen={stats.seen} queued={stats.queued} indexed={stats.indexed} "
             f"skipped={stats.skipped} failed={stats.failed}"
         )
         return 0

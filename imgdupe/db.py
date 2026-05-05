@@ -68,10 +68,15 @@ CREATE TABLE IF NOT EXISTS clusters (
 
 CREATE INDEX IF NOT EXISTS idx_images_sha256 ON images(sha256);
 CREATE INDEX IF NOT EXISTS idx_images_path ON images(path);
-CREATE INDEX IF NOT EXISTS idx_hash_bands_lookup
-    ON hash_bands(hash_type, band_index, band_value);
+CREATE INDEX IF NOT EXISTS idx_hash_bands_image_id ON hash_bands(image_id);
 CREATE INDEX IF NOT EXISTS idx_matches_score ON matches(score);
 CREATE INDEX IF NOT EXISTS idx_clusters_cluster ON clusters(cluster_id);
+"""
+
+
+MIGRATIONS = """
+DROP INDEX IF EXISTS idx_hash_bands_lookup;
+CREATE INDEX IF NOT EXISTS idx_hash_bands_image_id ON hash_bands(image_id);
 """
 
 
@@ -87,6 +92,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
 
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    conn.executescript(MIGRATIONS)
     conn.commit()
 
 
@@ -146,9 +152,16 @@ def upsert_image(
     return int(row["id"])
 
 
-def replace_hashes(conn: sqlite3.Connection, image_id: int, hashes: dict[str, bytes]) -> None:
+def replace_hashes(
+    conn: sqlite3.Connection,
+    image_id: int,
+    hashes: dict[str, bytes],
+    *,
+    clear_existing: bool = True,
+) -> None:
     grids = [hashes.get(f"grid{i}") for i in range(9)]
-    conn.execute("DELETE FROM hash_bands WHERE image_id = ?", (image_id,))
+    if clear_existing:
+        conn.execute("DELETE FROM hash_bands WHERE image_id = ?", (image_id,))
     conn.execute(
         """
         INSERT INTO hashes (

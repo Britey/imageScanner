@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 
 
@@ -6,6 +7,7 @@ class ScanConfig:
     min_width: int = 32
     min_height: int = 32
     batch_size: int = 500
+    workers: int = max(1, min((os.cpu_count() or 2) - 1, 8))
     whole_band_size: int = 2
     grid_band_size: int = 2
 
