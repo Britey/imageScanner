@@ -9,6 +9,18 @@ from PIL import Image, ImageOps
 
 EDGE_CROP_FRACTIONS = (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75)
 CENTER_CROP_FRACTIONS = (0.95, 0.90, 0.80, 0.70, 0.60, 0.50)
+TRYHARD_TILE_LAYOUTS = (
+    (1, 1),
+    (2, 1),
+    (1, 2),
+    (3, 1),
+    (1, 3),
+    (2, 2),
+    (3, 2),
+    (2, 3),
+    (4, 2),
+    (2, 4),
+)
 
 
 class ImageTooSmallError(ValueError):
@@ -73,6 +85,33 @@ def crop_region_hashes(img: Image.Image) -> dict[str, bytes]:
         crop = img.crop(box)
         if crop.width >= 32 and crop.height >= 32:
             results[name] = imagehash_to_bytes(imagehash.phash(crop, hash_size=16))
+    return results
+
+
+def tryhard_query_hashes(img: Image.Image) -> dict[str, bytes]:
+    results = {
+        f"crop:{name}": value
+        for name, value in crop_region_hashes(img).items()
+    }
+    for name, value in tile_hashes(img).items():
+        results[f"tile:{name}"] = value
+    return results
+
+
+def tile_hashes(img: Image.Image) -> dict[str, bytes]:
+    width, height = img.size
+    results = {}
+    for columns, rows in TRYHARD_TILE_LAYOUTS:
+        for row in range(rows):
+            for column in range(columns):
+                left = width * column // columns
+                upper = height * row // rows
+                right = width * (column + 1) // columns
+                lower = height * (row + 1) // rows
+                crop = img.crop((left, upper, right, lower))
+                if crop.width >= 32 and crop.height >= 32:
+                    name = f"{columns}x{rows}_{column}_{row}"
+                    results[name] = imagehash_to_bytes(imagehash.phash(crop, hash_size=16))
     return results
 
 

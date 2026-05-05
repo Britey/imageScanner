@@ -90,7 +90,7 @@ imgdupe scan "E:\Images" "F:\Downloads" --db images.sqlite --workers 16
 - 显示或隐藏完全相同的文件
 - 深度裁剪搜索
 
-深度模式可以在普通索引上运行，但如果建立了下面介绍的可选裁剪索引，效果会更好。
+深度模式可以在普通索引上运行：它会把查询图片临时切成许多裁剪和分块变体再搜索。如果建立了下面介绍的可选裁剪索引，效果会更好。
 
 ## 可选裁剪索引
 
@@ -121,7 +121,7 @@ imgdupe query "E:\query.jpg" --db images.sqlite --html result.html --min-score 5
 深度裁剪搜索：
 
 ```powershell
-imgdupe query "E:\cropped.jpg" --db images.sqlite --tryhard --min-score 25
+imgdupe query "E:\cropped.jpg" --db images.sqlite --tryhard --min-score 1
 ```
 
 ## 相似图片分组

@@ -8,7 +8,7 @@ from .bands import CROP_HASH_TYPES, Candidate, find_candidates
 from .config import ScanConfig
 from .db import fetch_crop_hashes, fetch_hash_row, hash_row_to_dict
 from .hashing import compute_image_hashes
-from .hashing import crop_region_hashes, load_normalized
+from .hashing import load_normalized, tryhard_query_hashes
 from .match import PairScore, score_hashes
 from .utils import human_size
 
@@ -41,8 +41,8 @@ def query_image(
         for crop_hash_type in CROP_HASH_TYPES:
             lookup_hashes[crop_hash_type] = hashes["phash256"]
     if tryhard:
-        for crop_hash in query_crop_hashes.values():
-            lookup_hashes[f"phash256:query_crop:{len(lookup_hashes)}"] = crop_hash
+        for index, crop_hash in enumerate(query_crop_hashes.values()):
+            lookup_hashes[f"phash256:query_crop:{index}"] = crop_hash
     candidates = find_candidates(
         conn,
         lookup_hashes,
@@ -87,7 +87,7 @@ def _query_crop_hashes(image_path: Path, config: ScanConfig) -> dict[str, bytes]
         min_width=config.min_width,
         min_height=config.min_height,
     )
-    return {f"crop:{name}": value for name, value in crop_region_hashes(img).items()}
+    return tryhard_query_hashes(img)
 
 
 def write_query_html(

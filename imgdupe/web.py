@@ -51,7 +51,7 @@ TRANSLATIONS = {
         "crop_ready": "ready",
         "crop_missing": "not built",
         "tryhard_hint": "Requires scanning with --crop-index.",
-        "tryhard_limited": "No crop index found. Tryhard will only compare query crop variants against the normal index.",
+        "tryhard_limited": "No crop index found. Tryhard will split the query image into many temporary crop/tile variants and compare them against the normal index.",
         "search": "Search",
         "new_search": "New search",
         "results": "Results",
@@ -94,7 +94,7 @@ TRANSLATIONS = {
         "crop_ready": "已建立",
         "crop_missing": "未建立",
         "tryhard_hint": "需要使用 --crop-index 扫描。",
-        "tryhard_limited": "未找到裁剪索引。深度搜索只会用查询图片的裁剪变体匹配普通索引。",
+        "tryhard_limited": "未找到裁剪索引。深度搜索会把查询图片临时切成许多裁剪/分块变体，并与普通索引匹配。",
         "search": "搜索",
         "new_search": "重新搜索",
         "results": "搜索结果",
@@ -338,7 +338,7 @@ def _index_page(state: WebState, lang: str) -> str:
         minScore.value = scores[quality.value] || scores.balanced;
       }});
       tryhard.addEventListener("change", () => {{
-        if (tryhard.checked && Number(minScore.value) > 25) minScore.value = "25";
+        if (tryhard.checked && Number(minScore.value) > 1) minScore.value = "1";
       }});
       window.addEventListener("paste", event => {{
         const item = [...event.clipboardData.items].find(i => i.type.startsWith("image/"));
@@ -557,7 +557,7 @@ def _options_from_fields(fields: dict[str, str], state: WebState) -> SearchOptio
     limit = _int_field(fields, "limit", state.limit)
     tryhard = fields.get("tryhard") == "1"
     if tryhard:
-        min_score = min(min_score, 25.0)
+        min_score = min(min_score, 1.0)
     return SearchOptions(
         limit=max(1, min(limit, 500)),
         min_score=max(0.0, min(min_score, 100.0)),

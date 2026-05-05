@@ -92,7 +92,7 @@ The web UI supports:
 - showing or hiding exact file matches
 - tryhard crop search
 
-Tryhard mode can run on a normal index, but it works best with the optional crop index described below.
+Tryhard mode can run on a normal index by splitting the query image into many temporary crop and tile variants. It works best with the optional crop index described below.
 
 ## Optional Crop Index
 
@@ -123,7 +123,7 @@ imgdupe query "E:\query.jpg" --db images.sqlite --html result.html --min-score 5
 Tryhard cropped search:
 
 ```powershell
-imgdupe query "E:\cropped.jpg" --db images.sqlite --tryhard --min-score 25
+imgdupe query "E:\cropped.jpg" --db images.sqlite --tryhard --min-score 1
 ```
 
 ## Similar Image Groups
