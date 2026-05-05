@@ -23,6 +23,7 @@ env/
 *.db
 *.db-*
 review/
+review*/
 *_query.html
 clusters.json
 delete_candidates.txt

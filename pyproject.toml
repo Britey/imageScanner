@@ -13,6 +13,9 @@ dependencies = [
 [project.scripts]
 imgdupe = "imgdupe.cli:main"
 
+[tool.setuptools.packages.find]
+include = ["imgdupe*"]
+
 [build-system]
 requires = ["setuptools>=65"]
 build-backend = "setuptools.build_meta"
