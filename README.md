@@ -1,6 +1,6 @@
 # imgdupe
 
-Local exact and near-duplicate image search using SQLite and perceptual hashes.
+Local image search using SQLite and perceptual hashes.
 
 ## Current MVP slice
 
@@ -12,8 +12,9 @@ Local exact and near-duplicate image search using SQLite and perceptual hashes.
 - SQLite hash band index
 - Query-by-image with ranked scores
 - Optional HTML query report
-- Duplicate clustering
+- Similar-image grouping
 - Static HTML cluster review gallery
+- Local web UI for query-by-image search
 
 ## Commands
 
@@ -22,6 +23,7 @@ imgdupe scan C:\path\to\images --db index.sqlite
 imgdupe query C:\path\to\image.jpg --db index.sqlite --html result.html
 imgdupe cluster --db index.sqlite --min-score 70
 imgdupe review --db index.sqlite --out review
+imgdupe serve --db index.sqlite
 ```
 
 If the console script is not installed yet, run through the module form:

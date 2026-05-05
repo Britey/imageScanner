@@ -8,6 +8,7 @@ from .db import connect, init_db
 from .query import query_image, write_query_html
 from .review import generate_review
 from .scan import scan_roots
+from .web import serve
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -18,13 +19,13 @@ def main(argv: list[str] | None = None) -> int:
     scan_parser.add_argument("roots", nargs="+", type=Path)
     scan_parser.add_argument("--db", type=Path, required=True)
 
-    query_parser = subparsers.add_parser("query", help="Find likely duplicates of one image.")
+    query_parser = subparsers.add_parser("query", help="Find visually similar images.")
     query_parser.add_argument("image", type=Path)
     query_parser.add_argument("--db", type=Path, required=True)
     query_parser.add_argument("--html", type=Path)
     query_parser.add_argument("--limit", type=int, default=50)
 
-    cluster_parser = subparsers.add_parser("cluster", help="Build duplicate clusters.")
+    cluster_parser = subparsers.add_parser("cluster", help="Build similar-image groups.")
     cluster_parser.add_argument("--db", type=Path, required=True)
     cluster_parser.add_argument("--min-score", type=float, default=70.0)
 
@@ -32,6 +33,14 @@ def main(argv: list[str] | None = None) -> int:
     review_parser.add_argument("--db", type=Path, required=True)
     review_parser.add_argument("--out", type=Path, required=True)
     review_parser.add_argument("--thumbnail-size", type=int, default=256)
+
+    serve_parser = subparsers.add_parser("serve", help="Run a local web UI for image search.")
+    serve_parser.add_argument("--db", type=Path, required=True)
+    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=8765)
+    serve_parser.add_argument("--limit", type=int, default=100)
+    serve_parser.add_argument("--min-score", type=float, default=55.0)
+    serve_parser.add_argument("--thumbnail-size", type=int, default=256)
 
     args = parser.parse_args(argv)
 
@@ -83,6 +92,17 @@ def main(argv: list[str] | None = None) -> int:
             "review complete: "
             f"clusters={stats.clusters} images={stats.images} "
             f"thumbnails={stats.thumbnails} out={stats.out_dir}"
+        )
+        return 0
+
+    if args.command == "serve":
+        serve(
+            conn,
+            host=args.host,
+            port=args.port,
+            limit=args.limit,
+            min_score=args.min_score,
+            thumbnail_size=args.thumbnail_size,
         )
         return 0
 
